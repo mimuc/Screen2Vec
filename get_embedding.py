@@ -22,7 +22,16 @@ parser.add_argument("-m", "--screen_model", required=True, type=str, help="path 
 parser.add_argument("-l", "--layout_model", required=True, type=str, help="path to layout embedding model")
 parser.add_argument("-v", "--net_version", type=int, default=4, help="0 for regular, 1 to embed location in UIs, 2 to use layout embedding, 3 to use both, 4 with both but no description, 5 to use both but not train description")
 
-args = parser.parse_args()
+#args = parser.parse_args()
+
+args = {
+    "screen":"C:\projects\Screen2Vec\Rico/filtered_traces/com.instagram.android/trace_1/view_hierarchies/1017.json",
+    "ui_model":"UI2Vec_model.ep120",
+    "screen_model":"Screen2Vec_model_v4.ep120",
+    "layout_model":"layout_encoder.ep800",
+    "num_predictors":4,
+    "net_version":4
+}
 
 
 def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, net_version):
@@ -34,7 +43,7 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
     bert_size = 768
 
     loaded_ui_model = HiddenLabelPredictorModel(bert, bert_size, 16)
-    loaded_ui_model.load_state_dict(torch.load(ui_model), strict=False)
+    loaded_ui_model.load_state_dict(torch.load(ui_model, map_location=torch.device('cpu')), strict=False)
 
     ui_class = torch.tensor([UI[1] for UI in labeled_text])
     ui_text = [UI[0] for UI in labeled_text]
@@ -52,9 +61,9 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
     descr_emb = torch.as_tensor(bert.encode([descr]), dtype=torch.float)
     
     layout_autoencoder = LayoutAutoEncoder()
-    layout_autoencoder.load_state_dict(torch.load(layout_model))
+    layout_autoencoder.load_state_dict(torch.load(layout_model, map_location=torch.device('cpu')))
     layout_embedder = layout_autoencoder.enc
-    screen_to_add = ScreenLayout(args.screen)
+    screen_to_add = ScreenLayout(screen)
     screen_pixels = screen_to_add.pixels.flatten()
     encoded_layout = layout_embedder(torch.as_tensor(screen_pixels, dtype=torch.float).unsqueeze(0)).squeeze(0)
 
@@ -67,7 +76,7 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
     if net_version in [0,1,6]:
         adss = 0
     else:
-        # case where screen layout vec is used
+        # case wihere screen layout vec s used
         adss = 64
     if net_version in [0,1,2,3]:
         desc_size = 768
@@ -77,7 +86,7 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
 
     screen_embedder = Screen2Vec(bert_size, adus, adss, net_version)
     loaded_screen_model = TracePredictor(screen_embedder, net_version)
-    loaded_screen_model.load_state_dict(torch.load(screen_model))
+    loaded_screen_model.load_state_dict(torch.load(screen_model, map_location=torch.device('cpu')))
 
 
     if net_version in [1,3,4,5]:
@@ -95,6 +104,28 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
 
     return encoded_layout, screen_emb[0][0]
 
-embeddings = get_embedding(args.screen, args.ui_model, args.screen_model, args.layout_model, args.num_predictors, args.net_version)
+embeddings = get_embedding(args["screen"], args["ui_model"], args["screen_model"], args["layout_model"], args["num_predictors"], args["net_version"])
 print(embeddings)
 
+
+## decode
+layout_model = "layout_encoder.ep800"
+
+layout_autoencoder = LayoutAutoEncoder()
+layout_autoencoder.load_state_dict(torch.load(layout_model, map_location=torch.device('cpu')))
+
+mydecoder = layout_autoencoder.dec
+
+# encoded layout
+result = mydecoder(embeddings[0])
+
+result_as_array = result.cpu().detach().numpy()
+
+resultscreen = ScreenLayout()
+resultscreen.pixels = result_as_array.reshape((100,56,2))
+resultscreen.convert_to_image_nonbin()
+
+# screen classtypes + texts
+screen_emb = embeddings[1]
+# TODO screen_embedder reverse: Man müsste eine Methode schreiben die Screen2Vec.forward rückwärts macht
+# TODO  und darin müsste man ein nn.Linear reversen

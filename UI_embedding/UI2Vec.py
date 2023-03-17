@@ -37,7 +37,7 @@ class UI2Vec(nn.Module):
         super().__init__()
         self.embedder = UIEmbedder(bert, bert_size, num_classes)
         self.lin = nn.Linear(bert_size + class_emb_size, bert_size)
-        self.lin.cuda()
+    #    self.lin.cuda()
 
     def forward(self, input_word_labeled):
         """
@@ -45,7 +45,7 @@ class UI2Vec(nn.Module):
         """
         input_word = input_word_labeled[0]
         input_label = input_word_labeled[1]
-        input_vector = self.embedder(input_word, input_label).cuda()
+        input_vector = self.embedder(input_word, input_label)#.cuda()
         output = self.lin(input_vector)
         return output
 
@@ -58,7 +58,7 @@ class HiddenLabelPredictorModel(nn.Module):
         super().__init__()
         self.class_emb_size = class_emb_size
         self.lin = nn.Linear(bert_size*n, bert_size+ self.class_emb_size)
-        self.lin.cuda()
+   #     self.lin.cuda()
         self.model = UI2Vec(bert)
         self.n = n
         self.bert_size = bert_size

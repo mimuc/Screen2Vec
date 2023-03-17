@@ -16,11 +16,12 @@ from PIL import Image
 
 class ScreenLayout():
 
-    def __init__(self, screen_path):
+    def __init__(self, screen_path=None):
         self.pixels = np.full((100,56,2), 0, dtype=float)
         self.vert_scale = 100/2560
         self.horiz_scale = 56/1440
-        self.load_screen(screen_path)
+        if screen_path is not None:
+            self.load_screen(screen_path)
 
     def load_screen(self, screen_path):
         with open(screen_path) as f:
@@ -66,6 +67,18 @@ class ScreenLayout():
                     p[y][x] = [255,0,0]
         im = Image.fromarray(p.astype(np.uint8))
         im.save("example.png")
+
+    def convert_to_image_nonbin(self):
+        p = np.full((100,56,3), 255, dtype=np.uint)
+        for y in range(len(self.pixels)):
+            for x in range(len(self.pixels[0])):
+                p[y][x] = [255 * np.min([self.pixels[y][x][1], 1]), 0, 255*np.min([self.pixels[y][x][0],1])]
+                # if (self.pixels[y][x] == [1,0]).all() or (self.pixels[y][x] == [1,1]).all():
+                #     p[y][x] = [0,0,255*np.min(self.pixels[y][x][0],1.0)]
+                # elif (self.pixels[y][x] == [0,1]).all():
+                #     p[y][x] = [255*np.min(self.pixels[y][x][1],1.0),0,0]
+        im = Image.fromarray(p.astype(np.uint8))
+        im.save("example-out.png")
 
 
 
