@@ -238,7 +238,7 @@ class LayoutTrainer():
         for idx, data in data_itr:
             self.optimizer.zero_grad()
             total_data+=1
-            data = data.cuda()
+          #  data = data.cuda()
             result = self.model(data)
             encoding_loss = self.criterion(result, data)
             total_loss+=float(encoding_loss)
@@ -290,7 +290,7 @@ class ImageTrainer():
         for idx, data in data_itr:
             self.optimizer.zero_grad()
             total_data+=1
-            data = data.cuda()
+       #     data = data.cuda()
             result = self.model(data)
             encoding_loss = self.criterion(result, data)
             total_loss+=float(encoding_loss)
