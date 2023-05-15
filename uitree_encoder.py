@@ -54,11 +54,14 @@ args = {  # default data from README
 
 ### preprocessing json -> numeric data
 
+## takes path to a screen json,
+## and returns 3 arrays (one element coresponds to one box in the UI): encoded text, box type, bounding box edge coords
 def get_screen_components_vector(screen):
+    # convert screen jsons to list of boxes
     with open(screen) as f:
         rico_screen = load_rico_screen_dict(json.load(f))
     labeled_text = get_all_labeled_uis_from_rico_screen(rico_screen)
-
+    # => labeled_text: list of boxes [ ... [text content, component type, array of bounding box edge coords] ... ]
   #  bert = SentenceTransformer('bert-base-nli-mean-tokens') # TODO uncomment this to include text in encoding
   #  bert_size = 768
 
@@ -69,7 +72,7 @@ def get_screen_components_vector(screen):
     ui_text = [UI[0] for UI in labeled_text]
     ui_coords = torch.tensor([UI[2] for UI in labeled_text])
 
-    # my quick text encoder: take the length
+    # TODO my quick text encoder: take the length
     ui_text = [len(atext) for atext in ui_text]
    # UI_embeddings = loaded_ui_model.model([ui_text, ui_class])  # TODO change this to encoder -> outside of this method
 
@@ -86,11 +89,12 @@ for fn in os.listdir(dataset_path):
     if fn.endswith('.json'):
         screen_data = get_screen_components_vector(dataset_path + '/' + fn)#  ScreenLayout(dataset_path + '/' + fn)
         screens.append(UITreeFeatures(screen_data[0], screen_data[1]))
-        # TODO if I actually use the ui_text, some text encoder has to be included (bert is a model)
+        # UITreeFeatures represents one (steady) screen. However TODO the box coords are currently discarded
 
 
 
 ### autoencoder tech
+# screens / a UITreeDataset represents a sequence of steady screens
 dataset = UITreeDataset(screens) #ScreenLayoutDataset(args['dataset'])
 
 dataset_size = len(dataset)
